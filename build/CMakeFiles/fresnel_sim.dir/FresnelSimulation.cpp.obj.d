@@ -369,4 +369,7 @@ CMakeFiles/fresnel_sim.dir/FresnelSimulation.cpp.obj: \
  C:/msys64/mingw64/include/opencv4/opencv2/video.hpp \
  C:/msys64/mingw64/include/opencv4/opencv2/video/tracking.hpp \
  C:/msys64/mingw64/include/opencv4/opencv2/video/background_segm.hpp \
- C:/NoSys/programming/KAMAZ_FRENEL/fresnel.h
+ C:/NoSys/programming/KAMAZ_FRENEL/fresnel.h \
+ C:/msys64/mingw64/include/c++/15.2.0/numeric \
+ C:/msys64/mingw64/include/c++/15.2.0/bits/stl_numeric.h \
+ C:/msys64/mingw64/include/c++/15.2.0/pstl/glue_numeric_defs.h
