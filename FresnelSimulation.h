@@ -6,33 +6,35 @@
 
 class FresnelSimulation {
 public:
-    FresnelSimulation(double lambda = 515e-9); // зелёный свет по умолчанию
+    FresnelSimulation(double lambda = 515e-9, double deltaLambda = 36e-9);
 
-    void setSlitWidth(double width_m);    // ширина щели в метрах
-    void setDistance(double z_m);          // расстояние до плоскости наблюдения в метрах
+    void setSlitWidth(double width_m);
+    void setDistance(double z_m);
     void setImageSize(int width, int height);
-    void setIntensityScale(double scale);  // множитель яркости
+    void setIntensityScale(double scale);
+    void setZoom(double zoom);
+    void setResolution(double sigma_um);   // ширина аппаратной функции в мкм
 
-    // Расчёт одномерного профиля интенсивности (относительные единицы)
-    std::vector<double> computeProfile(int numPoints, double xRange_m);
-
-    // Генерация изображения, имитирующего вид в окуляр микроскопа
-    cv::Mat generateImage();
-
-    // Вспомогательные методы для получения текущих параметров
     double getSlitWidth() const { return m_b; }
     double getDistance() const { return m_z; }
 
+    std::vector<double> computeProfile(int numPoints, double xRange_m);
+    cv::Mat generateImage();
+
 private:
-    double m_lambda;       // длина волны [м]
-    double m_b;            // ширина щели [м]
-    double m_z;            // расстояние [м]
+    double m_lambda;           // центральная длина волны
+    double m_dLambda;          // ширина спектра (FWHM)
+    double m_b;                // ширина щели
+    double m_z;                // расстояние
     int m_imgWidth;
     int m_imgHeight;
     double m_intensityScale;
+    double m_zoom;
+    double m_resolution;       // σ аппаратной функции [м]
 
-    // Применение маски поля зрения, перекрестия, шкалы
+    // Вспомогательные методы
+    std::vector<double> computeMonochromaticProfile(int numPoints, double xRange_m, double lambda);
     void applyEyepieceOverlay(cv::Mat &img, double xRange_m);
 };
 
-#endif // FRESNEL_SIMULATION_H
+#endif
