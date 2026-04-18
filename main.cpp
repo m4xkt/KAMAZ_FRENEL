@@ -1,71 +1,91 @@
 #include <opencv2/opencv.hpp>
 #include "FresnelSimulation.h"
 #include <iostream>
-#include <cmath>
+#include <sstream>
 
-// Глобальные переменные для трекбаров
-FresnelSimulation g_sim(515e-9); // зелёный
+using namespace std;
+
+FresnelSimulation g_sim(515e-9, 36e-9);
 cv::Mat g_image;
-std::string g_windowName = "Fresnel Diffraction on a Slit";
+string g_windowName = "Fresnel Diffraction on a Slit";
 
-// Обработчики трекбаров
+void updateWindowTitle() {
+    ostringstream oss;
+    oss << "Fresnel: b=" << g_sim.getSlitWidth()*1000 << "mm, z=" << g_sim.getDistance()*100 << "cm";
+    cv::setWindowTitle(g_windowName, oss.str());
+}
+
 void onSlitChange(int pos, void*) {
-    // pos в условных единицах: 0..200 -> 0.1..2.0 мм
-    double width_mm = 0.1 + pos * 0.01; // шаг 0.01 мм
+    double width_mm = 0.1 + pos * 0.01;
     g_sim.setSlitWidth(width_mm * 1e-3);
     g_image = g_sim.generateImage();
     cv::imshow(g_windowName, g_image);
+    updateWindowTitle();
 }
 
 void onDistanceChange(int pos, void*) {
-    // pos: 0..100 -> 1..50 см
-    double z_cm = 1.0 + pos * 0.5; // шаг 0.5 см
+    double z_cm = 1.0 + pos * 0.5;
     g_sim.setDistance(z_cm * 1e-2);
     g_image = g_sim.generateImage();
     cv::imshow(g_windowName, g_image);
+    updateWindowTitle();
 }
 
 void onIntensityChange(int pos, void*) {
-    // pos: 0..20 -> 0.1..2.0
-    double scale = 0.1 + pos * 0.1;
+    double scale = 0.1 + pos * 0.1;   // теперь до 50*0.1=5.0
     g_sim.setIntensityScale(scale);
     g_image = g_sim.generateImage();
     cv::imshow(g_windowName, g_image);
 }
 
-int main() {
-    std::cout << "Fresnel Diffraction Simulation\n";
-    std::cout << "Use trackbars to change slit width, distance, and brightness.\n";
-    std::cout << "Press ESC to exit.\n";
-
-    // Начальные параметры
-    g_sim.setImageSize(1000, 700);
-    g_sim.setSlitWidth(0.5e-3); // 0.5 мм
-    g_sim.setDistance(0.15);    // 15 см
-    g_sim.setIntensityScale(1.0);
-
-    // Создание окна
-    cv::namedWindow(g_windowName, cv::WINDOW_NORMAL);
-    cv::resizeWindow(g_windowName, 1000, 700);
-
-    // Трекбары
-    int slitPos = 40; // соответствует 0.5 мм (0.1 + 40*0.01 = 0.5)
-    int distPos = 28; // 1 + 28*0.5 = 15 см
-    int intenPos = 9; // 0.1 + 9*0.1 = 1.0
-
-    cv::createTrackbar("Slit width [x0.01 mm]", g_windowName, &slitPos, 190, onSlitChange);
-    cv::createTrackbar("Distance [x0.5 cm]", g_windowName, &distPos, 98, onDistanceChange);
-    cv::createTrackbar("Brightness [x0.1]", g_windowName, &intenPos, 19, onIntensityChange);
-
-    // Первоначальное отображение
+void onZoomChange(int pos, void*) {
+    double zoom = 0.2 + pos * 0.05;
+    g_sim.setZoom(zoom);
     g_image = g_sim.generateImage();
     cv::imshow(g_windowName, g_image);
+}
 
-    // Главный цикл
+void onResolutionChange(int pos, void*) {
+    double sigma_um = 1.0 + pos * 0.5;
+    g_sim.setResolution(sigma_um);
+    g_image = g_sim.generateImage();
+    cv::imshow(g_windowName, g_image);
+}
+
+int main() {
+    cout << "Fresnel Diffraction Simulation\n";
+    cout << "Parameters: slit width (0.1-5.0 mm), distance (1-100 cm), brightness (0.1-5.0), zoom, resolution\n";
+    cout << "Press ESC to exit.\n";
+
+    g_sim.setImageSize(1400, 900);
+    g_sim.setSlitWidth(0.5e-3);
+    g_sim.setDistance(0.15);
+    g_sim.setIntensityScale(1.0);
+    g_sim.setZoom(1.0);
+    g_sim.setResolution(5.0);
+
+    cv::namedWindow(g_windowName, cv::WINDOW_NORMAL);
+    cv::resizeWindow(g_windowName, 1400, 900);
+
+    int slitPos = 40;       // 0.5 mm
+    int distPos = 28;       // 15 cm
+    int intenPos = 19;       // 1.0
+    int zoomPos = 16;       // 1.0
+    int resPos = 8;         // 5 um
+
+    cv::createTrackbar("Slit width [x0.01 mm]", g_windowName, &slitPos, 490, onSlitChange);
+    cv::createTrackbar("Distance [x0.5 cm]", g_windowName, &distPos, 198, onDistanceChange);
+    cv::createTrackbar("Brightness [x0.1]", g_windowName, &intenPos, 49, onIntensityChange); // до 5.0 // до 5.0
+    cv::createTrackbar("Zoom [x0.05]", g_windowName, &zoomPos, 100, onZoomChange);
+    cv::createTrackbar("Resolution [um]", g_windowName, &resPos, 100, onResolutionChange);
+
+    g_image = g_sim.generateImage();
+    cv::imshow(g_windowName, g_image);
+    updateWindowTitle();
+
     while (true) {
         int key = cv::waitKey(30);
-        if (key == 27) break; // ESC
-        // Можно добавить ручное обновление, но трекбары уже вызывают обновление
+        if (key == 27) break;
     }
 
     cv::destroyAllWindows();
