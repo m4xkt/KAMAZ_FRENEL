@@ -1,0 +1,3 @@
+C:/nosys/programming/KAMAZ_FRENEL/build/CMakeFiles/fresnel_sim.dir
+C:/nosys/programming/KAMAZ_FRENEL/build/CMakeFiles/edit_cache.dir
+C:/nosys/programming/KAMAZ_FRENEL/build/CMakeFiles/rebuild_cache.dir
