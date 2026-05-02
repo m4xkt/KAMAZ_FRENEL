@@ -7,9 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(OpenCV REQUIRED)
 
 add_executable(fresnel_sim
-    main.cpp
-    fresnel.cpp
-    FresnelSimulation.cpp
+    src/main.cpp
+    src/fresnel.cpp
+    src/FresnelSimulation.cpp
 )
+
+target_include_directories(fresnel_sim PRIVATE include)
 
 target_link_libraries(fresnel_sim ${OpenCV_LIBS})
