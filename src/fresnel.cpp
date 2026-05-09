@@ -1,111 +1,122 @@
 #include "fresnel.h"
 #include <cmath>
+#include <complex>
 #include <algorithm>
-#include <vector>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
 namespace Fresnel {
+    using Complex = std::complex<double>;
+    
+    // точность вычислений
+    constexpr double TOL = 1e-12;
 
-// Точное вычисление ряда Тейлора для C(x) и S(x)
-// Используется компенсированное суммирование Кэхана и относительная погрешность
-static void fresnel_series(double x, double &C, double &S) {
-    const double eps = 1e-12; // относительная точность
-    const int maxIter = 5000;
-    
-    double sumC = 0.0, sumS = 0.0;
-    double cCompC = 0.0, cCompS = 0.0; // компенсации Кэхана
-    
-    // Начальные члены: C = x, S = x^3/6 (для стандартного определения с pi/2)
-    // Но так как в дифракции обычно используют C(u) = int_0^u cos(pi/2 t^2) dt,
-    // начальные члены уже содержат pi/2. Для простоты и совместимости с вашим кодом
-    // реализуем рекурренту для int cos(pi/2 t^2) dt.
-    double pi2 = M_PI / 2.0;
-    double pi2_sq = pi2 * pi2;
-    
-    double termC = x;
-    double termS = (pi2 * x * x * x) / 3.0;
-    double x4 = x * x * x * x;
-    double pi2_x4 = pi2_sq * x4;
-    
-    int n = 1;
-    while (n < maxIter) {
-        // Суммирование Кэхана для C
-        double yC = termC - cCompC;
-        double tC = sumC + yC;
-        cCompC = (tC - sumC) - yC;
-        sumC = tC;
+    //ряд тейлора
+    void fresnel_taylor(double x, double &C, double &S) {
+        Complex sum(0.0, 0.0);
+        Complex term = x; // Первый член ряда: k=0
+        Complex i_pi(0.0, M_PI);
+        double x_sq = x * x;
         
-        // Суммирование Кэхана для S
-        double yS = termS - cCompS;
-        double tS = sumS + yS;
-        cCompS = (tS - sumS) - yS;
-        sumS = tS;
+        int k = 0;
+        while (std::abs(term) > TOL && k < 100) {
+            sum += term;
+            k++;
+            // Рекуррентная формула: T_k = T_{k-1} * (i*pi*x^2) / (2k*(2k+1))
+            term *= i_pi * x_sq / (2.0 * k * (2.0 * k + 1.0));
+        }
         
-        // Проверка сходимости по относительной погрешности
-        bool converged = (std::abs(termC) < eps * std::abs(sumC)) && 
-                         (std::abs(termS) < eps * std::abs(sumS));
-        if (converged) break;
-        
-        // Корректные рекуррентные коэффициенты для стандартных интегралов Френеля
-        // C: -(pi^2/4) * (4n-3) / [2n(2n-1)(4n+1)]
-        // S: -(pi^2/4) * (4n-1) / [2n(2n+1)(4n+3)]
-        double n_d = static_cast<double>(n);
-        double denC = 2.0 * n_d * (2.0 * n_d - 1.0) * (4.0 * n_d + 1.0);
-        double denS = 2.0 * n_d * (2.0 * n_d + 1.0) * (4.0 * n_d + 3.0);
-        
-        termC *= -pi2_x4 * (4.0 * n_d - 3.0) / denC;
-        termS *= -pi2_x4 * (4.0 * n_d - 1.0) / denS;
-        ++n;
+        C = sum.real();
+        S = sum.imag();
     }
-    
-    C = sumC;
-    S = sumS;
-}
 
-// 3-членная асимптотика (ошибка < 1e-4 при |x| > 2.2)
-static void fresnel_asymp(double x, double &C, double &S) {
-    double ax = std::abs(x);
-    double theta = M_PI * ax * ax / 2.0;
-    double sin_theta = std::sin(theta);
-    double cos_theta = std::cos(theta);
-    
-    double inv_x = 1.0 / ax;
-    double inv_pi = 1.0 / M_PI;
-    double inv_pi2 = inv_pi * inv_pi;
-    double inv_pi3 = inv_pi2 * inv_pi;
-    double inv_x3 = inv_x * inv_x * inv_x;
-    double inv_x5 = inv_x3 * inv_x * inv_x;
-    
-    // 3 члена разложения
-    C = 0.5 + inv_pi * inv_x * sin_theta 
-            - inv_pi2 * inv_x3 * cos_theta 
-            - 3.0 * inv_pi3 * inv_x5 * sin_theta;
-            
-    S = 0.5 - inv_pi * inv_x * cos_theta 
-            - inv_pi2 * inv_x3 * sin_theta 
-            + 3.0 * inv_pi3 * inv_x5 * cos_theta;
-            
-    if (x < 0) {
-        C = -C;
-        S = -S;
+    //правило трапеций
+    void fresnel_trapezoid(double x, double &C, double &S) {
+        // Согласно статье, N2=12 обеспечивает точность лучше 1e-16
+        const int N = 12;
+        double A_N = std::sqrt(N + 0.5);
+        double pi_A_N = M_PI * A_N;
+        double inv_A2 = 1.0 / (A_N * A_N);
+        
+        Complex sum_val(0.0, 0.0);
+        for (int k = 1; k <= N; ++k) {
+            double k_half = k - 0.5;
+            double exp_arg = -M_PI * k_half * k_half * inv_A2;
+            // Знаменатель: x^2 + i*2*(k-1/2)^2*A_N^{-2}
+            Complex denom(x * x, 2.0 * k_half * k_half * inv_A2);
+            sum_val += std::exp(exp_arg) / denom;
+        }
+        
+        Complex i(0.0, 1.0);
+        
+        // Первое слагаемое: (1+i)/2 - (1+i)/(exp((1-i)*pi*A_N*x) + 1)
+        // exp((1-i)*pi*A_N*x) = exp(pi*A_N*x) * exp(-i*pi*A_N*x)
+        Complex exp_arg1(pi_A_N * x, -pi_A_N * x);
+        Complex exp_term1 = std::exp(exp_arg1);
+        Complex term1 = (1.0 + i) / (exp_term1 + 1.0);
+        
+        // Второе слагаемое: (2ix*exp(i*pi*x^2/2)/(pi*A_N)) * sum_val
+        Complex exp_arg2(0.0, M_PI * x * x / 2.0);
+        Complex exp_term2 = std::exp(exp_arg2);
+        Complex term2 = (2.0 * i * x * exp_term2 / (M_PI * A_N)) * sum_val;
+        
+        // Итоговая формула (6)-(7)
+        Complex G = (1.0 + i) / 2.0 - term1 - term2;
+        
+        C = G.real();
+        S = G.imag();
     }
-}
 
-void fresnel(double x, double &C, double &S) {
-    double ax = std::abs(x);
-    if (ax < 1e-12) {
-        C = S = 0.0;
-        return;
+    //асимптотическое разложение
+    void fresnel_asymp(double x, double &C, double &S) {
+        Complex sum_val(0.0, 0.0);
+        double theta = M_PI * x * x / 2.0;
+        Complex exp_theta(0.0, theta);
+        exp_theta = std::exp(exp_theta);
+        
+        double inv_pi_x = 1.0 / (M_PI * x);
+        
+        // k=0: член = -i/(pi*x)
+        Complex term(0.0, -inv_pi_x);
+        int k = 0;
+        
+        while (std::abs(term) > TOL && k < 50) {
+            sum_val += term;
+            k++;
+            // Рекуррентная формула: T_k = T_{k-1} * (2k-1)*(-i) / (pi*x^2)
+            term *= (2.0 * k - 1.0) * Complex(0.0, -1.0) * inv_pi_x / x;
+        }
+        
+        // Формула (11): Q_N(x) = (1+i)/2 + exp(i*pi*x^2/2) * sum
+        Complex G = Complex(0.5, 0.5) + exp_theta * sum_val;
+        
+        C = G.real();
+        S = G.imag();
     }
-    // Граница снижена до 2.2 благодаря 3-членной асимптотике
-    if (ax < 2.2) {
-        fresnel_series(x, C, S);
-    } else {
-        fresnel_asymp(x, C, S);
-    }
-}
 
+    void fresnel(double x, double &C, double &S) {
+        double ax = std::abs(x);
+        
+        if (ax < 1e-15) {
+            C = S = 0.0;
+            return;
+        }
+        
+        //выбор метода
+        if (ax < 1.5) {
+            fresnel_taylor(ax, C, S);
+        } else if (ax <= 6.0) {
+            fresnel_trapezoid(ax, C, S);
+        } else {
+            fresnel_asymp(ax, C, S);
+        }
+        
+        // Интегралы Френеля - нечётные функции: G(-x) = -G(x)
+        if (x < 0) {
+            C = -C;
+            S = -S;
+        }
+    }
 } // namespace Fresnel
