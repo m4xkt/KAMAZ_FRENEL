@@ -9,13 +9,16 @@ class ImageRenderer {
 public:
     ImageRenderer(int width = 1400, int height = 900);
     
+    // Параметры отображения
     void setImageSize(int width, int height);
     void setIntensityScale(double scale);
     void setZoom(double zoom);
     void setResolution(double sigma_m);
     
+    // Геттеры для координатора
     double getZoom() const { return m_zoom; }
-    
+
+    // Основной метод рендеринга
     cv::Mat renderProfile(const std::vector<double>& profile, 
                          double xRange_m,
                          double slitWidth_m,
