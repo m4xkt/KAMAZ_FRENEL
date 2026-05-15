@@ -45,18 +45,44 @@ std::vector<double> DiffractionCalculator::computeMonochromaticProfile(
         
         double dC = C2 - C1;
         double dS = S2 - S1;
-        intensity[i] = dC*dC + dS*dS;
+        intensity[i] = 0.5 * (dC*dC + dS*dS);   // нормировка
     }
     return intensity;
 }
 
 std::vector<double> DiffractionCalculator::computeProfile(int numPoints, double xRange_m) {
-    auto profile = computeMonochromaticProfile(numPoints, xRange_m, m_lambda);
-    
-    // Нормализация к [0, 1]
-    double maxVal = *std::max_element(profile.begin(), profile.end());
-    if (maxVal > 1e-12) {
-        for (auto& v : profile) v /= maxVal;
-    }
+    auto profile = computePolychromaticProfile(numPoints, xRange_m);
     return profile;
+}
+std::vector<double> DiffractionCalculator::computePolychromaticProfile(
+    int numPoints, double xRange_m)
+{
+    std::vector<double> total(numPoints, 0.0);
+    if (m_dLambda <= 0.0 || m_spectralPoints < 2) {
+        // Монохроматический случай
+        return computeMonochromaticProfile(numPoints, xRange_m, m_lambda);
+    }
+
+    double sigma = m_dLambda / (2.0 * std::sqrt(2.0 * std::log(2.0))); // FWHM -> sigma
+    double lambdaMin = m_lambda - 3.0 * sigma;
+    double lambdaMax = m_lambda + 3.0 * sigma;
+    double dLambdaStep = (lambdaMax - lambdaMin) / (m_spectralPoints - 1);
+
+    double weightSum = 0.0;
+    for (int i = 0; i < m_spectralPoints; ++i) {
+        double lambda = lambdaMin + i * dLambdaStep;
+        if (lambda <= 0.0) continue;
+        double weight = std::exp(-0.5 * std::pow((lambda - m_lambda) / sigma, 2));
+        weightSum += weight;
+
+        auto monoProfile = computeMonochromaticProfile(numPoints, xRange_m, lambda);
+        for (int j = 0; j < numPoints; ++j) {
+            total[j] += weight * monoProfile[j];
+        }
+    }
+
+    if (weightSum > 1e-12) {
+        for (auto& v : total) v /= weightSum;
+    }
+    return total;
 }

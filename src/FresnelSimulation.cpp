@@ -28,6 +28,7 @@ void FresnelSimulation::syncConfigToComponents() {
     m_renderer.setIntensityScale(m_intensityScale);
     m_renderer.setZoom(m_zoom);
     m_renderer.setResolution(m_resolution);
+
 }
 
 // Сеттеры обновляют состояние и синхронизируют компоненты

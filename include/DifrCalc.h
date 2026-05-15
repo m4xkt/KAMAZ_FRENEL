@@ -23,6 +23,9 @@ public:
     
     // Основной метод расчёта
     std::vector<double> computeProfile(int numPoints, double xRange_m);
+
+    // Новый сеттер для количества точек спектрального интегрирования
+    void setSpectralPoints(int N) { m_spectralPoints = std::max(3, N); }
     
 private:
     std::vector<double> computeMonochromaticProfile(int numPoints, double xRange_m, double lambda);
@@ -31,6 +34,9 @@ private:
     double m_dLambda;     // ширина спектра (FWHM) [м]
     double m_b;           // ширина щели [м]
     double m_z;           // расстояние до экрана [м]
+
+    int m_spectralPoints = 31;   // число точек при интегрировании по спектру
+    std::vector<double> computePolychromaticProfile(int numPoints, double xRange_m);
 };
 
 #endif 
