@@ -28,6 +28,12 @@ void FresnelSimulation::syncConfigToComponents() {
     m_renderer.setIntensityScale(m_intensityScale);
     m_renderer.setZoom(m_zoom);
     m_renderer.setResolution(m_resolution);
+    m_renderer.setColorFromWavelength(m_lambda * 1e9);  // обновляем цвет
+}
+
+void FresnelSimulation::setWavelength(double lambda_m) {
+    m_lambda = std::max(1e-9, lambda_m);
+    syncConfigToComponents();
 }
 
 // Сеттеры обновляют состояние и синхронизируют компоненты
@@ -72,5 +78,5 @@ cv::Mat FresnelSimulation::generateImage() {
     xRange = std::max(0.0001, std::min(0.05, xRange));
     
     auto profile = m_calculator.computeProfile(profilePoints, xRange);
-    return m_renderer.renderProfile(profile, xRange, m_slitWidth, m_distance);
+    return m_renderer.renderProfile(profile, xRange, m_slitWidth, m_distance, m_lambda * 1e9);
 }

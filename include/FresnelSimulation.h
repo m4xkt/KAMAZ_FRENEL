@@ -16,6 +16,8 @@ public:
     void setIntensityScale(double scale);
     void setZoom(double zoom);
     void setResolution(double sigma_um);
+    void setWavelength(double lambda_m);
+    double getWavelength() const { return m_lambda; }
     
     double getSlitWidth() const { return m_slitWidth; }
     double getDistance() const { return m_distance; }

@@ -18,6 +18,15 @@ void onSlitChange(int, void*) {
     cv::imshow(g_windowName, g_image);
 }
 
+void onWavelengthChange(int, void*) {
+    int pos = cv::getTrackbarPos("Wavelength [nm]", g_windowName);
+    double lambda_nm = 400 + pos;   // диапазон 400-700
+    g_sim.setWavelength(lambda_nm * 1e-9);
+    g_image = g_sim.generateImage();
+    cv::imshow(g_windowName, g_image);
+}
+
+
 void onDistanceChange(int, void*) {
     int pos = cv::getTrackbarPos("Distance [x0.5 cm]", g_windowName);
     double z_cm = 1.0 + pos * 0.5;
@@ -65,6 +74,8 @@ int main() {
     // 2. Создание окна
     cv::namedWindow(g_windowName, cv::WINDOW_NORMAL);
     cv::resizeWindow(g_windowName, 1400, 900);
+    cv::createTrackbar("Wavelength [nm]", g_windowName, nullptr, 300, onWavelengthChange);
+    cv::setTrackbarPos("Wavelength [nm]", g_windowName, 115); // 515 нм
 
     // 3. Регистрация трекбаров (nullptr -> используем только callback)
     cv::createTrackbar("Slit width [x0.01 mm]", g_windowName, nullptr, 490, onSlitChange);

@@ -4,36 +4,82 @@
 #include <algorithm>
 #include <cstdio>
 
+// Преобразование длины волны (нм) в цвет BGR
+static cv::Scalar wavelengthToRGB(double lambda_nm) {
+    double r = 0.0, g = 0.0, b = 0.0;
+    if (lambda_nm >= 380 && lambda_nm < 440) {
+        r = -(lambda_nm - 440) / (440 - 380);
+        g = 0.0;
+        b = 1.0;
+    } else if (lambda_nm >= 440 && lambda_nm < 490) {
+        r = 0.0;
+        g = (lambda_nm - 440) / (490 - 440);
+        b = 1.0;
+    } else if (lambda_nm >= 490 && lambda_nm < 510) {
+        r = 0.0;
+        g = 1.0;
+        b = -(lambda_nm - 510) / (510 - 490);
+    } else if (lambda_nm >= 510 && lambda_nm < 580) {
+        r = (lambda_nm - 510) / (580 - 510);
+        g = 1.0;
+        b = 0.0;
+    } else if (lambda_nm >= 580 && lambda_nm < 645) {
+        r = 1.0;
+        g = -(lambda_nm - 645) / (645 - 580);
+        b = 0.0;
+    } else if (lambda_nm >= 645 && lambda_nm <= 750) {
+        r = 1.0;
+        g = 0.0;
+        b = 0.0;
+    }
+    if (lambda_nm >= 380 && lambda_nm < 420) {
+        double factor = 0.3 + 0.7 * (lambda_nm - 380) / (420 - 380);
+        r *= factor; g *= factor; b *= factor;
+    } else if (lambda_nm >= 700 && lambda_nm <= 750) {
+        double factor = 0.3 + 0.7 * (750 - lambda_nm) / (750 - 700);
+        r *= factor; g *= factor; b *= factor;
+    }
+    return cv::Scalar(b * 255, g * 255, r * 255);
+}
+
 ImageRenderer::ImageRenderer(int width, int height)
     : m_imgWidth(width), m_imgHeight(height), 
-      m_intensityScale(1.0), m_zoom(1.0), m_resolution(5e-6)
+      m_intensityScale(1.0), m_zoom(1.0), m_resolution(5e-6),
+      m_colorBGR(wavelengthToRGB(515))   // начальный цвет (зелёный)
 {
 }
 
-void ImageRenderer::setImageSize(int width, int height) { 
-    m_imgWidth = width; m_imgHeight = height; 
+void ImageRenderer::setImageSize(int width, int height) {
+    m_imgWidth = width;
+    m_imgHeight = height;
 }
-void ImageRenderer::setIntensityScale(double scale) { 
-    m_intensityScale = std::max(0.1, std::min(10.0, scale)); 
+
+void ImageRenderer::setIntensityScale(double scale) {
+    m_intensityScale = std::max(0.1, std::min(10.0, scale));
 }
-void ImageRenderer::setZoom(double zoom) { 
-    m_zoom = std::max(0.1, std::min(10.0, zoom)); 
+
+void ImageRenderer::setZoom(double zoom) {
+    m_zoom = std::max(0.1, std::min(10.0, zoom));
 }
-void ImageRenderer::setResolution(double sigma_m) { 
-    m_resolution = std::max(1e-6, sigma_m); 
+
+void ImageRenderer::setResolution(double sigma_m) {
+    m_resolution = std::max(1e-6, sigma_m);
+}
+
+void ImageRenderer::setColorFromWavelength(double lambda_nm) {
+    m_colorBGR = wavelengthToRGB(lambda_nm);
 }
 
 cv::Mat ImageRenderer::renderProfile(const std::vector<double>& profile,
                                      double xRange_m,
                                      double slitWidth_m,
-                                     double distance_m)
+                                     double distance_m,
+                                     double lambda_nm)
 {
     cv::Mat img(m_imgHeight, m_imgWidth, CV_8UC3, cv::Scalar(30, 30, 30));
     if (profile.empty()) return img;
     
     int profilePoints = static_cast<int>(profile.size());
-    
-    // Интерполяция профиля на ширину изображения
     cv::Mat row(1, profilePoints, CV_64FC1);
     for (int i = 0; i < profilePoints; ++i)
         row.at<double>(0, i) = profile[i];
@@ -41,18 +87,20 @@ cv::Mat ImageRenderer::renderProfile(const std::vector<double>& profile,
     cv::Mat stretchedRow;
     cv::resize(row, stretchedRow, cv::Size(m_imgWidth, 1), 0, 0, cv::INTER_LINEAR);
     
-    // Отрисовка дифракционной картины (зелёный канал)
     for (int col = 0; col < m_imgWidth; ++col) {
         double I = stretchedRow.at<double>(0, col) * m_intensityScale;
         uchar val = static_cast<uchar>(std::min(255.0, I * 255.0));
-        cv::Vec3b color(0, val, 0);
+        // Смешиваем цвет с интенсивностью
+        uchar b = static_cast<uchar>(m_colorBGR[0] * val / 255.0);
+        uchar g = static_cast<uchar>(m_colorBGR[1] * val / 255.0);
+        uchar r = static_cast<uchar>(m_colorBGR[2] * val / 255.0);
+        cv::Vec3b color(b, g, r);
         for (int rowIdx = 0; rowIdx < m_imgHeight; ++rowIdx)
             img.at<cv::Vec3b>(rowIdx, col) = color;
     }
     
     applyEyepieceOverlay(img, xRange_m);
-    drawParameterText(img, slitWidth_m, distance_m, m_zoom);
-    
+    drawParameterText(img, slitWidth_m, distance_m, m_zoom, lambda_nm);
     return img;
 }
 
@@ -60,13 +108,11 @@ void ImageRenderer::applyEyepieceOverlay(cv::Mat &img, double xRange_m) {
     int cx = img.cols / 2, cy = img.rows / 2;
     int radius = static_cast<int>(std::min(cx, cy) * 0.85);
     
-    // Перекрестие
     cv::line(img, cv::Point(cx - 25, cy), cv::Point(cx + 25, cy), 
              cv::Scalar(255,255,255), 1, cv::LINE_AA);
     cv::line(img, cv::Point(cx, cy - 25), cv::Point(cx, cy + 25), 
              cv::Scalar(255,255,255), 1, cv::LINE_AA);
     
-    // Шкала масштаба
     int scaleY = cy + 40;
     int scaleLen = static_cast<int>(radius * 0.7);
     cv::line(img, cv::Point(cx - scaleLen, scaleY), 
@@ -88,21 +134,17 @@ void ImageRenderer::applyEyepieceOverlay(cv::Mat &img, double xRange_m) {
 }
 
 void ImageRenderer::drawParameterText(cv::Mat &img, double slitWidth_m, 
-                                      double distance_m, double zoom)
+                                      double distance_m, double zoom, double lambda_nm)
 {
     char buf[64];
     snprintf(buf, sizeof(buf), "b = %.3f mm", slitWidth_m * 1000);
-    cv::putText(img, buf, cv::Point(20, 30), 
-                cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255,255,255), 1);
-    
+    cv::putText(img, buf, cv::Point(20, 30), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255,255,255), 1);
     snprintf(buf, sizeof(buf), "z = %.1f cm", distance_m * 100);
-    cv::putText(img, buf, cv::Point(20, 55), 
-                cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255,255,255), 1);
-    
+    cv::putText(img, buf, cv::Point(20, 55), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255,255,255), 1);
     snprintf(buf, sizeof(buf), "zoom = %.2fx", zoom);
-    cv::putText(img, buf, cv::Point(20, 80), 
-                cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255,255,255), 1);
-    
+    cv::putText(img, buf, cv::Point(20, 80), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255,255,255), 1);
+    snprintf(buf, sizeof(buf), "lambda = %.0f nm", lambda_nm);
+    cv::putText(img, buf, cv::Point(20, 105), cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255,255,255), 1);
     cv::putText(img, "Fresnel diffraction", cv::Point(20, img.rows-20),
                 cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(200,200,200), 1);
 }
