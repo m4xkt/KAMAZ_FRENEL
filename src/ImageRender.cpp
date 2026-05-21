@@ -49,9 +49,10 @@ ImageRenderer::ImageRenderer(int width, int height)
 {
 }
 
-void ImageRenderer::setImageSize(int width, int height) {
-    m_imgWidth = width;
-    m_imgHeight = height;
+void ImageRenderer::setImageSize(int width, int height) { 
+    // Делаем размеры нечётными, чтобы крест был строго по центру
+    m_imgWidth = (width % 2 == 0) ? width + 1 : width;
+    m_imgHeight = (height % 2 == 0) ? height + 1 : height;
 }
 
 void ImageRenderer::setIntensityScale(double scale) {

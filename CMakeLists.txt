@@ -10,8 +10,9 @@ add_executable(fresnel_sim
     src/DifrCalc.cpp
     src/ImageRender.cpp
     src/FresnelSimulation.cpp
+    src/SimulationController.cpp
+    src/GuiManager.cpp            
 )
 
 target_link_libraries(fresnel_sim ${OpenCV_LIBS})
 target_include_directories(fresnel_sim PRIVATE include)
-

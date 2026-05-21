@@ -10,10 +10,10 @@
 FresnelSimulation::FresnelSimulation(double lambda, double deltaLambda)
     : m_lambda(lambda), m_dLambda(deltaLambda),
       m_slitWidth(0.5e-3), m_distance(0.15),
-      m_imgWidth(1400), m_imgHeight(900),
+      m_imgWidth(1401), m_imgHeight(901),
       m_intensityScale(1.0), m_zoom(1.0), m_resolution(5e-6),
       m_calculator(lambda, deltaLambda),
-      m_renderer(1400, 900)
+      m_renderer(1401, 901)
 {
     syncConfigToComponents();
 }
@@ -45,8 +45,12 @@ void FresnelSimulation::setDistance(double z_m) {
     m_distance = std::max(0.001, z_m); 
     m_calculator.setDistance(m_distance); 
 }
-void FresnelSimulation::setImageSize(int width, int height) { 
-    m_imgWidth = width; m_imgHeight = height;
+void FresnelSimulation::setImageSize(int width, int height) {
+    // Гарантируем нечётность
+    if (width % 2 == 0) width++;
+    if (height % 2 == 0) height++;
+    m_imgWidth = width;
+    m_imgHeight = height;
     m_renderer.setImageSize(width, height);
 }
 void FresnelSimulation::setIntensityScale(double scale) { 
