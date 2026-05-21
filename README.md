@@ -27,18 +27,23 @@ make
 ./fresnel_sim
 ```
 
-**Шоу "Окна" с Дмитрием Нагиевым (windows)**  
-```bash
+Для MinGW64
+cd Директория проекта
 mkdir build
 cd build
-cmake .. -G "Visual Studio 17 2022" -A x64  
-cmake --build . --config Release
-```
-
-Исполняемый файл будет лежать в `build\Release\fresnel_sim.exe`.
+cmake -G "MinGW Makefiles" -DOpenCV_DIR="C:/msys64/ucrt64/lib/cmake/opencv4" ..
+cmake --build .
 
 > Если OpenCV не находится автоматически, при вызове `cmake` укажите каталог с `OpenCVConfig.cmake`:  
 > `cmake .. -DOpenCV_DIR=C:/opencv/build`
+
+Через CMD
+cd Директория проекта
+mkdir build
+cd build
+cmake --build build --config Release -- -j %NUMBER_OF_PROCESSORS%
+
+ИЛИ ЗАПУСТИТЬ ФАЙЛ build.bat/build.sh
 
 
 *Создано при моральной поддержке наших родных. Алл райтс резервд*
