@@ -28,21 +28,24 @@ make
 ```
 
 Для MinGW64
+```
 cd Директория проекта
 mkdir build
 cd build
 cmake -G "MinGW Makefiles" -DOpenCV_DIR="C:/msys64/ucrt64/lib/cmake/opencv4" ..
 cmake --build .
+```
 
 > Если OpenCV не находится автоматически, при вызове `cmake` укажите каталог с `OpenCVConfig.cmake`:  
 > `cmake .. -DOpenCV_DIR=C:/opencv/build`
 
 Через CMD
+```
 cd Директория проекта
 mkdir build
 cd build
 cmake --build build --config Release -- -j %NUMBER_OF_PROCESSORS%
-
+```
 ИЛИ ЗАПУСТИТЬ ФАЙЛ build.bat/build.sh
 
 
