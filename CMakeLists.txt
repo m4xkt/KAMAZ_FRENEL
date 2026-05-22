@@ -14,5 +14,13 @@ add_executable(fresnel_sim
     src/GuiManager.cpp            
 )
 
+find_package(OpenCV REQUIRED)
+
 target_link_libraries(fresnel_sim ${OpenCV_LIBS})
 target_include_directories(fresnel_sim PRIVATE include)
+if(OpenCV_FOUND)
+    message(STATUS "OpenCV found: ${OpenCV_DIR}")
+    message(STATUS "OpenCV libs: ${OpenCV_LIBS}")
+else()
+    message(FATAL_ERROR "OpenCV not found")
+endif()
