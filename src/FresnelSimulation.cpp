@@ -66,6 +66,12 @@ void FresnelSimulation::setResolution(double sigma_um) {
     m_renderer.setResolution(m_resolution);
 }
 
+void FresnelSimulation::saveProfileToFile(const std::string& filename) {
+    const int numPoints = 8000;
+    const double xRange = 0.002;   // полный диапазон 2 мм (от -1 до 1 мм)
+    m_calculator.saveProfileToFile(filename, numPoints, xRange);
+}
+
 double FresnelSimulation::computeAutoRange() {
     double fringeWidth = std::sqrt(m_lambda * m_distance);
     double autoRange = 2.0 * 8.0 * fringeWidth;

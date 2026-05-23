@@ -77,32 +77,46 @@ cv::Mat ImageRenderer::renderProfile(const std::vector<double>& profile,
                                      double distance_m,
                                      double lambda_nm)
 {
-    cv::Mat img(m_imgHeight, m_imgWidth, CV_8UC3, cv::Scalar(30, 30, 30));
-    if (profile.empty()) return img;
-    
+    if (profile.empty()) {
+        return cv::Mat(m_imgHeight, m_imgWidth, CV_32FC3, cv::Scalar(30,30,30));
+    }
+
     int profilePoints = static_cast<int>(profile.size());
+
+    // Растягиваем профиль до ширины изображения
     cv::Mat row(1, profilePoints, CV_64FC1);
     for (int i = 0; i < profilePoints; ++i)
         row.at<double>(0, i) = profile[i];
-    
+
     cv::Mat stretchedRow;
     cv::resize(row, stretchedRow, cv::Size(m_imgWidth, 1), 0, 0, cv::INTER_LINEAR);
-    
+
+    // 1. Создаём float-изображение (каналы B,G,R в диапазоне [0,1])
+    cv::Mat imgFloat(m_imgHeight, m_imgWidth, CV_32FC3, cv::Scalar(30.0f/255.0f, 30.0f/255.0f, 30.0f/255.0f));
+
     for (int col = 0; col < m_imgWidth; ++col) {
-        double I = stretchedRow.at<double>(0, col) * m_intensityScale;
-        uchar val = static_cast<uchar>(std::min(255.0, I * 255.0));
-        // Смешиваем цвет с интенсивностью
-        uchar b = static_cast<uchar>(m_colorBGR[0] * val / 255.0);
-        uchar g = static_cast<uchar>(m_colorBGR[1] * val / 255.0);
-        uchar r = static_cast<uchar>(m_colorBGR[2] * val / 255.0);
-        cv::Vec3b color(b, g, r);
+        double I_val = stretchedRow.at<double>(0, col) * m_intensityScale;
+        I_val = std::min(1.0, I_val); // ограничиваем [0,1]
+
+        // Цвет в формате BGR, каждый канал умножаем на интенсивность
+        float b = static_cast<float>(m_colorBGR[0] / 255.0 * I_val);
+        float g = static_cast<float>(m_colorBGR[1] / 255.0 * I_val);
+        float r = static_cast<float>(m_colorBGR[2] / 255.0 * I_val);
+        cv::Vec3f color(b, g, r);
+
         for (int rowIdx = 0; rowIdx < m_imgHeight; ++rowIdx)
-            img.at<cv::Vec3b>(rowIdx, col) = color;
+            imgFloat.at<cv::Vec3f>(rowIdx, col) = color;
     }
-    
-    applyEyepieceOverlay(img, xRange_m);
-    drawParameterText(img, slitWidth_m, distance_m, m_zoom, lambda_nm);
-    return img;
+
+    // 2. Конвертируем в 8-бит (CV_8UC3) с масштабом 255
+    cv::Mat img8bit;
+    imgFloat.convertTo(img8bit, CV_8UC3, 255.0);
+
+    // 3. Накладываем перекрестие и текст (они ожидают 8-битное изображение)
+    applyEyepieceOverlay(img8bit, xRange_m);
+    drawParameterText(img8bit, slitWidth_m, distance_m, m_zoom, lambda_nm);
+
+    return img8bit;
 }
 
 void ImageRenderer::applyEyepieceOverlay(cv::Mat &img, double xRange_m) {

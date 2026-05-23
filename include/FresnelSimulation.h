@@ -17,6 +17,7 @@ public:
     void setZoom(double zoom);
     void setResolution(double sigma_um);
     void setWavelength(double lambda_m);
+    void saveProfileToFile(const std::string& filename);
     double getWavelength() const { return m_lambda; }
     
     double getSlitWidth() const { return m_slitWidth; }

@@ -28,7 +28,11 @@ void GuiManager::run() {
     updateAndShow();
     while (true) {
         int key = cv::waitKey(30);
-        if (key == 27) break; // ESC
+        if (key == 27) break;                     // ESC – выход
+        if (key == 's' || key == 'S') {           // S – сохранить профиль
+            m_controller->getSimulation().saveProfileToFile("fresnel_profile_cpp.txt");
+            std::cout << "Saved profile to fresnel_profile_cpp.txt" << std::endl;
+        }
     }
     cv::destroyAllWindows();
 }

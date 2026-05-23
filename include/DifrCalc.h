@@ -4,6 +4,7 @@
 
 #include <vector>
 #include "fresnel.h"
+#include <string>
 
 class DiffractionCalculator {
 public:
@@ -14,7 +15,8 @@ public:
     void setSpectralWidth(double deltaLambda_m);
     void setSlitWidth(double width_m);
     void setDistance(double z_m);
-    
+    void saveProfileToFile(const std::string& filename, int numPoints, double xRange_m);
+
     // Геттеры
     double getWavelength() const { return m_lambda; }
     double getSpectralWidth() const { return m_dLambda; }

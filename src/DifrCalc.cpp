@@ -2,6 +2,8 @@
 #include "DifrCalc.h"
 #include <cmath>
 #include <algorithm>
+#include <fstream>
+#include <iostream>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -15,6 +17,26 @@ DiffractionCalculator::DiffractionCalculator(double lambda, double deltaLambda)
 void DiffractionCalculator::setWavelength(double lambda_m) { 
     m_lambda = std::max(1e-9, lambda_m); 
 }
+
+void DiffractionCalculator::saveProfileToFile(const std::string& filename, int numPoints, double xRange_m) {
+    std::vector<double> intensity = computeProfile(numPoints, xRange_m);
+    if (intensity.empty()) return;
+    
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Cannot open file: " << filename << std::endl;
+        return;
+    }
+    
+    file << "# x [m]\tintensity (normalized)\n";
+    for (int i = 0; i < numPoints; ++i) {
+        double x = -xRange_m/2.0 + i * xRange_m / (numPoints - 1);
+        file << x << "\t" << intensity[i] << "\n";
+    }
+    file.close();
+    std::cout << "Profile saved to " << filename << std::endl;
+}
+
 void DiffractionCalculator::setSpectralWidth(double deltaLambda_m) { 
     m_dLambda = std::max(0.0, deltaLambda_m); 
 }
