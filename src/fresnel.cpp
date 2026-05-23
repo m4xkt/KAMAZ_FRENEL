@@ -105,9 +105,9 @@ namespace Fresnel {
         }
         
         //выбор метода
-        if (ax < 2.0) {
+        if (ax < 1) {
             fresnel_taylor(ax, C, S);
-        } else if (ax <= 2.0) {
+        } else if (ax <= 5.0) {
             fresnel_trapezoid(ax, C, S);
         } else {
             fresnel_asymp(ax, C, S);
