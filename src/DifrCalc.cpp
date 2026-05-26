@@ -28,7 +28,13 @@ void DiffractionCalculator::saveProfileToFile(const std::string& filename, int n
         return;
     }
     
+    // Заголовок с параметрами (Python сможет их распарсить)
+    file << "# lambda=" << m_lambda << "\n";
+    file << "# b=" << m_b << "\n";
+    file << "# z=" << m_z << "\n";
+    file << "# xRange=" << xRange_m << "\n";
     file << "# x [m]\tintensity (normalized)\n";
+    
     for (int i = 0; i < numPoints; ++i) {
         double x = -xRange_m/2.0 + i * xRange_m / (numPoints - 1);
         file << x << "\t" << intensity[i] << "\n";
@@ -36,7 +42,6 @@ void DiffractionCalculator::saveProfileToFile(const std::string& filename, int n
     file.close();
     std::cout << "Profile saved to " << filename << std::endl;
 }
-
 void DiffractionCalculator::setSpectralWidth(double deltaLambda_m) { 
     m_dLambda = std::max(0.0, deltaLambda_m); 
 }

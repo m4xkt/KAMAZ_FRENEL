@@ -72,7 +72,7 @@ void FresnelSimulation::saveProfileToFile(const std::string& filename) {
     m_calculator.saveProfileToFile(filename, numPoints, xRange);
 }
 
-double FresnelSimulation::computeAutoRange() {
+double FresnelSimulation::computeAutoRange() {  
     double fringeWidth = std::sqrt(m_lambda * m_distance);
     double autoRange = 2.0 * 8.0 * fringeWidth;
     if (m_slitWidth > autoRange) autoRange = m_slitWidth * 1.5;
